@@ -48,7 +48,9 @@ deploy-job:
   # script:
   #   - rsync -avz --delete dist/test-deploy/ admin@149.28.132.52:/var/www/html/test-deploy/
   script:
-    - rsync -avz --delete dist/test-deploy/ "test-deploy/"
+    # - rsync -avz --delete dist/test-deploy/ "test-deploy/"
+    - powershell Remove-Item -Recurse -Force ""D:\xampp\htdocs\test-code\*"
+    - powershell Copy-Item -Recurse -Force "dist\test-deploy\*" "D:\xampp\htdocs\test-code\"
   only:
     - main
   dependencies:
