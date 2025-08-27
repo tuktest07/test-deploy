@@ -5,7 +5,7 @@ stages:
 
 variables:
   # ป้องกันปัญหา interactive prompt
-  DEPLOY_PATH: "/c/xampp/htdocs/test-deploy"   # ปรับตาม path XAMPP local
+  DEPLOY_PATH: "D:\\xampp\\htdocs\\test-deploy"   # ปรับตาม path XAMPP local
   ANGULAR_PROJECT: "test-deploy"          # ชื่อ project ใน angular.json
   GIT_STRATEGY: clone
   NODE_ENV: production
@@ -51,8 +51,8 @@ deploy-job:
     # - rsync -avz --delete dist/test-deploy/ "test-deploy/"
     - powershell npm install
     - powershell npm run build -- --configuration production
-    - powershell Remove-Item -Recurse -Force "D:\xampp\htdocs\test-code\*"
-    - powershell Copy-Item -Recurse -Force "dist\test-deploy\*" "D:\xampp\htdocs\test-code\"
+    - powershell Remove-Item -Recurse -Force "$env:DEPLOY_PATH\*"
+    - powershell Copy-Item -Recurse -Force "dist\$env:ANGULAR_PROJECT\*" "$env:DEPLOY_PATH\"
   only:
     - main
   dependencies:
