@@ -5,8 +5,14 @@ stages:
 
 variables:
   # ป้องกันปัญหา interactive prompt
+  DEPLOY_PATH: "/c/xampp/htdocs/test-deploy"   # ปรับตาม path XAMPP local
+  ANGULAR_PROJECT: "test-deploy"          # ชื่อ project ใน angular.json
   GIT_STRATEGY: clone
   NODE_ENV: production
+
+cache:
+  paths:
+    - node_modules/
 
 build-job:
   stage: build
@@ -39,8 +45,10 @@ deploy-job:
     - echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H 149.28.132.52 >> ~/.ssh/known_hosts
+  # script:
+  #   - rsync -avz --delete dist/test-deploy/ admin@149.28.132.52:/var/www/html/test-deploy/
   script:
-    - rsync -avz --delete dist/test-deploy/ admin@149.28.132.52:/var/www/html/test-deploy/
+    - rsync -avz --delete dist/test-deploy/ "test-deploy/"
   only:
     - main
   dependencies:
