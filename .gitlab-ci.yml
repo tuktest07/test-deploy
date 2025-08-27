@@ -1,98 +1,59 @@
 stages:
   - build
+  - test
   - deploy
 
 variables:
-  ANGULAR_PROJECT: "test-deploy"                     # ตาม angular.json
-  DEPLOY_PATH: "D:\\xampp\\htdocs\\test-deploy"      # path บน XAMPP ของคุณ
+  # ป้องกันปัญหา interactive prompt
+  DEPLOY_PATH: "/c/xampp/htdocs/test-deploy"   # ปรับตาม path XAMPP local
+  ANGULAR_PROJECT: "test-deploy"          # ชื่อ project ใน angular.json
+  GIT_STRATEGY: clone
+  NODE_ENV: production
 
-build:
+cache:
+  paths:
+    - node_modules/
+
+build-job:
   stage: build
-  tags: [ "windows" ]
+  image: node:20
   script:
-    - powershell $ErrorActionPreference = "Stop"
-    - powershell npm ci
-    - powershell npm run build -- --configuration production
+    - npm ci
+    - npx ng build --configuration production
   artifacts:
     paths:
-      - "dist/%ANGULAR_PROJECT%/"
-    expire_in: 1 hour
-
-deploy:
-  stage: deploy
-  tags: [ "windows" ]
+      - dist/
+    expire_in: 1 day
+ 
+# 2️⃣ Run Unit Tests
+test-job:
+  stage: test
+  image: node:20
   script:
-    - powershell $ErrorActionPreference = "Stop"
-    # ตรวจว่ามีไฟล์ build หรือไม่
-    - powershell 'if (-not (Test-Path "dist\\$env:ANGULAR_PROJECT")) { throw "Build output not found: dist\\$env:ANGULAR_PROJECT" }'
-    # สร้างโฟลเดอร์ถ้ายังไม่มี
-    - powershell 'if (-not (Test-Path "$env:DEPLOY_PATH")) { New-Item -ItemType Directory -Force -Path "$env:DEPLOY_PATH" | Out-Null }'
-    # ลบไฟล์เก่า
-    - powershell 'Write-Output "Deploying to $env:DEPLOY_PATH"'
-    - powershell 'Remove-Item -Recurse -Force "$env:DEPLOY_PATH\\*" -ErrorAction SilentlyContinue'
-    # คัดลอก build ใหม่
-    - powershell 'Copy-Item -Recurse -Force "dist\\$env:ANGULAR_PROJECT\\*" "$env:DEPLOY_PATH\\"'
+    - npm ci
+    - npm run test -- --watch=false --browsers=ChromeHeadless
+  dependencies:
+    - build-job
+
+# 3️⃣ Deploy ด้วย rsync + SSH Key
+deploy-job:
+  stage: deploy
+  image: alpine
+  before_script:
+    - apk add --no-cache rsync openssh
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 149.28.132.52 >> ~/.ssh/known_hosts
+  # script:
+  #   - rsync -avz --delete dist/test-deploy/ admin@149.28.132.52:/var/www/html/test-deploy/
+  script:
+    # - rsync -avz --delete dist/test-deploy/ "test-deploy/"
+    - powershell npm install
+    - powershell npm run build -- --configuration production
+    - powershell Remove-Item -Recurse -Force ""D:\xampp\htdocs\test-code\*"
+    - powershell Copy-Item -Recurse -Force "dist\test-deploy\*" "D:\xampp\htdocs\test-code\"
   only:
     - main
-
-
-
-# stages:
-#   - build
-#   - test
-#   - deploy
-
-# variables:
-#   # ป้องกันปัญหา interactive prompt
-#   DEPLOY_PATH: "/c/xampp/htdocs/test-deploy"   # ปรับตาม path XAMPP local
-#   ANGULAR_PROJECT: "test-deploy"          # ชื่อ project ใน angular.json
-#   GIT_STRATEGY: clone
-#   NODE_ENV: production
-
-# cache:
-#   paths:
-#     - node_modules/
-
-# build-job:
-#   stage: build
-#   image: node:20
-#   script:
-#     - npm ci
-#     - npx ng build --configuration production
-#   artifacts:
-#     paths:
-#       - dist/
-#     expire_in: 1 day
- 
-# # 2️⃣ Run Unit Tests
-# test-job:
-#   stage: test
-#   image: node:20
-#   script:
-#     - npm ci
-#     - npm run test -- --watch=false --browsers=ChromeHeadless
-#   dependencies:
-#     - build-job
-
-# # 3️⃣ Deploy ด้วย rsync + SSH Key
-# deploy-job:
-#   stage: deploy
-#   image: alpine
-#   before_script:
-#     - apk add --no-cache rsync openssh
-#     - mkdir -p ~/.ssh
-#     - echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
-#     - chmod 600 ~/.ssh/id_rsa
-#     - ssh-keyscan -H 149.28.132.52 >> ~/.ssh/known_hosts
-#   # script:
-#   #   - rsync -avz --delete dist/test-deploy/ admin@149.28.132.52:/var/www/html/test-deploy/
-#   script:
-#     # - rsync -avz --delete dist/test-deploy/ "test-deploy/"
-#     - powershell npm install
-#     - powershell npm run build -- --configuration production
-#     - powershell Remove-Item -Recurse -Force ""D:\xampp\htdocs\test-code\*"
-#     - powershell Copy-Item -Recurse -Force "dist\test-deploy\*" "D:\xampp\htdocs\test-code\"
-#   only:
-#     - main
-#   dependencies:
-#     - build-job 
+  dependencies:
+    - build-job 
