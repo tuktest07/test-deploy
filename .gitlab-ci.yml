@@ -51,7 +51,7 @@ deploy-job:
     # - rsync -avz --delete dist/test-deploy/ "test-deploy/"
     - powershell npm install
     - powershell npm run build -- --configuration production
-    - powershell Remove-Item -Recurse -Force ""D:\xampp\htdocs\test-code\*"
+    - powershell Remove-Item -Recurse -Force "D:\xampp\htdocs\test-code\*"
     - powershell Copy-Item -Recurse -Force "dist\test-deploy\*" "D:\xampp\htdocs\test-code\"
   only:
     - main
